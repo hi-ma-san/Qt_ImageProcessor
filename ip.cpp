@@ -251,6 +251,8 @@ void IP::mouseReleaseEvent(QMouseEvent *event)
             // Ensure we're within image bounds
             if (x1 >= 0 && y1 >= 0 && x1 + w <= img.width() && y1 + h <= img.height())
             {
+                qDebug() << "Opening ImageEditor with region:" << x1 << y1 << w << h;
+                
                 // Extract the selected region
                 QImage croppedImage = img.copy(x1, y1, w, h);
                 
@@ -258,7 +260,17 @@ void IP::mouseReleaseEvent(QMouseEvent *event)
                 ImageEditor *editor = new ImageEditor(croppedImage);
                 editor->setAttribute(Qt::WA_DeleteOnClose);
                 editor->show();
+                
+                qDebug() << "ImageEditor window opened";
             }
+            else
+            {
+                qDebug() << "Selection out of bounds:" << x1 << y1 << w << h << "Image size:" << img.width() << img.height();
+            }
+        }
+        else
+        {
+            qDebug() << "Selection too small or empty:" << intersection.width() << "x" << intersection.height();
         }
     }
 }
