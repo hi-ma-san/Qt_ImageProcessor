@@ -4,9 +4,10 @@
 #include <QDebug>
 #include <QPixmap>
 #include <QMenuBar>
+#include <QRubberBand>
 
 IP::IP(QWidget *parent)
-    : QMainWindow(parent)
+    : QMainWindow(parent), rubberBand(nullptr), selecting(false)
 {
     setWindowTitle(tr("Image Processor"));
 
@@ -162,7 +163,12 @@ void IP::mouseMoveEvent(QMouseEvent *event)
         str += (" = " + QString::number(gray));
     }
     MousePosLabel -> setText("指標位置：" + str);
-
+    
+    // Update rubber band during selection
+    if (selecting && rubberBand)
+    {
+        rubberBand->setGeometry(QRect(selectionOrigin, event->pos()).normalized());
+    }
 }
 
 
@@ -172,6 +178,23 @@ void IP::mousePressEvent(QMouseEvent *event)
     if (event -> button() == Qt::LeftButton)
     {
         statusBar() -> showMessage(tr("左鍵：") + str);
+        
+        // Check if click is within imgWin and image is loaded
+        int x = event->x() - imgWin->x() - central->x();
+        int y = event->y() - imgWin->y() - central->y();
+        
+        if (!img.isNull() && x >= 0 && x < imgWin->width() && y >= 0 && y < imgWin->height())
+        {
+            selecting = true;
+            selectionOrigin = event->pos();
+            
+            if (!rubberBand)
+            {
+                rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
+            }
+            rubberBand->setGeometry(QRect(selectionOrigin, QSize()));
+            rubberBand->show();
+        }
     }
     else if (event -> button() == Qt::RightButton)
     {
@@ -187,6 +210,57 @@ void IP::mouseReleaseEvent(QMouseEvent *event)
 {
     QString str = "(" + QString::number(event -> x()) + ", " + QString::number(event -> y()) + ")";
     statusBar() -> showMessage(tr("釋放：") + str);
+    
+    if (selecting && rubberBand)
+    {
+        rubberBand->hide();
+        selecting = false;
+        
+        // Get selection rectangle in window coordinates
+        QRect selectionRect = rubberBand->geometry();
+        
+        // Convert to imgWin coordinates
+        int imgWinX = imgWin->x() + central->x();
+        int imgWinY = imgWin->y() + central->y();
+        
+        QRect imgWinRect(imgWinX, imgWinY, imgWin->width(), imgWin->height());
+        QRect intersection = selectionRect.intersected(imgWinRect);
+        
+        // Check if we have a valid selection within the image
+        if (!intersection.isEmpty() && intersection.width() > 10 && intersection.height() > 10)
+        {
+            // Convert to image coordinates
+            int x1 = intersection.x() - imgWinX;
+            int y1 = intersection.y() - imgWinY;
+            int w = intersection.width();
+            int h = intersection.height();
+            
+            // Scale coordinates if image is scaled in the label
+            QPixmap pixmap = imgWin->pixmap(Qt::ReturnByValue);
+            if (!pixmap.isNull())
+            {
+                double scaleX = (double)img.width() / pixmap.width();
+                double scaleY = (double)img.height() / pixmap.height();
+                
+                x1 = (int)(x1 * scaleX);
+                y1 = (int)(y1 * scaleY);
+                w = (int)(w * scaleX);
+                h = (int)(h * scaleY);
+            }
+            
+            // Ensure we're within image bounds
+            if (x1 >= 0 && y1 >= 0 && x1 + w <= img.width() && y1 + h <= img.height())
+            {
+                // Extract the selected region
+                QImage croppedImage = img.copy(x1, y1, w, h);
+                
+                // Open ImageEditor with the cropped image
+                ImageEditor *editor = new ImageEditor(croppedImage);
+                editor->setAttribute(Qt::WA_DeleteOnClose);
+                editor->show();
+            }
+        }
+    }
 }
 
 void IP::mouseDoubleClickEvent(QMouseEvent *event)
