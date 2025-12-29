@@ -80,3 +80,14 @@ CMakeLists.txt.user*
 .rcc/
 .uic/
 /build*/
+
+# Qt generated files
+moc_*.cpp
+moc_*.h
+moc_predefs.h
+*.o
+Makefile
+.qmake.stash
+
+# Build output
+Qt_ImageProcessor
