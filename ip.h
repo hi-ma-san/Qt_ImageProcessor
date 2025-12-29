@@ -8,6 +8,12 @@
 #include <QImage>
 #include <QLabel>
 #include <QHBoxLayout>
+#include "it.h"
+
+#include <QMouseEvent>
+#include <QStatusBar>
+#include <QLabel>
+
 
 class IP : public QMainWindow
 {
@@ -22,6 +28,7 @@ public:
     void createToolBars();
     void loadFile(QString filename);
 
+
 private:
     QWidget     *central;
     QMenu       *fileMenu;
@@ -35,11 +42,24 @@ private:
     QAction     *exitAction;
     QAction     *zoomInAction;
     QAction     *zoomOutAction;
-    QHBoxLayout *mainLayout;   // ★ 存 layout
+    QHBoxLayout *mainLayout;
+
+    IT *gWin;
+    QAction *geometryAction;
+
+    QLabel  *statusLabel;
+    QLabel  *MousePosLabel;
 
 private slots:
     void showOpenFile();
     void windowZoomIn();
     void windowZoomOut();
+    void showGeometryTransform();
+
+protected:
+    void mouseDoubleClickEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
+    void mousePressEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
 };
 #endif // IP_H
