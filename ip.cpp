@@ -157,7 +157,7 @@ void IP::mouseMoveEvent(QMouseEvent *event)
     QString str = "(" + QString::number(event -> x()) + ", " + QString::number(event -> y()) + ")";
     int x = event -> x() - imgWin -> x() - central -> x();
     int y = event -> y() - imgWin -> y() - central -> y();
-    if (!img.isNull() && -1 < x && x < imgWin -> width() && -1 < y && y < imgWin -> height())
+    if (!img.isNull() && x >= 0 && x < imgWin -> width() && y >= 0 && y < imgWin -> height())
     {
         int gray = qGray(img.pixel(x, y));
         str += (" = " + QString::number(gray));

@@ -41,6 +41,7 @@ private:
     
     void setupUI();
     void redrawImage();
+    void drawStrokesToPainter(QPainter &painter, const QVector<QVector<QPoint>> &strokes, const QVector<QColor> &colors);
     
 protected:
     void mousePressEvent(QMouseEvent *event) override;

@@ -54,23 +54,28 @@ void ImageEditor::setupUI()
     resize(originalImage.width() + 50, originalImage.height() + 100);
 }
 
+void ImageEditor::drawStrokesToPainter(QPainter &painter, const QVector<QVector<QPoint>> &strokes, const QVector<QColor> &colors)
+{
+    for (int i = 0; i < strokes.size(); ++i)
+    {
+        if (strokes[i].size() > 1)
+        {
+            painter.setPen(QPen(colors[i], 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            for (int j = 1; j < strokes[i].size(); ++j)
+            {
+                painter.drawLine(strokes[i][j-1], strokes[i][j]);
+            }
+        }
+    }
+}
+
 void ImageEditor::redrawImage()
 {
     QImage displayImage = currentImage.copy();
     QPainter painter(&displayImage);
     
     // Draw all previous strokes
-    for (int i = 0; i < allStrokes.size(); ++i)
-    {
-        if (allStrokes[i].size() > 1)
-        {
-            painter.setPen(QPen(strokeColors[i], 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-            for (int j = 1; j < allStrokes[i].size(); ++j)
-            {
-                painter.drawLine(allStrokes[i][j-1], allStrokes[i][j]);
-            }
-        }
-    }
+    drawStrokesToPainter(painter, allStrokes, strokeColors);
     
     // Draw current stroke
     if (currentStroke.size() > 1)
@@ -139,16 +144,16 @@ void ImageEditor::mouseReleaseEvent(QMouseEvent *event)
         {
             allStrokes.append(currentStroke);
             strokeColors.append(penColor);
-            currentStroke.clear();
             
-            // Apply drawing to current image
+            // Apply the last stroke to current image
             QPainter painter(&currentImage);
-            painter.setPen(QPen(penColor, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-            const QVector<QPoint> &lastStroke = allStrokes.last();
-            for (int i = 1; i < lastStroke.size(); ++i)
-            {
-                painter.drawLine(lastStroke[i-1], lastStroke[i]);
-            }
+            QVector<QVector<QPoint>> lastStrokeVec;
+            QVector<QColor> lastColorVec;
+            lastStrokeVec.append(allStrokes.last());
+            lastColorVec.append(penColor);
+            drawStrokesToPainter(painter, lastStrokeVec, lastColorVec);
+            
+            currentStroke.clear();
         }
         redrawImage();
     }
@@ -213,17 +218,7 @@ void ImageEditor::saveImage()
         QPainter painter(&finalImage);
         
         // Draw all strokes
-        for (int i = 0; i < allStrokes.size(); ++i)
-        {
-            if (allStrokes[i].size() > 1)
-            {
-                painter.setPen(QPen(strokeColors[i], 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-                for (int j = 1; j < allStrokes[i].size(); ++j)
-                {
-                    painter.drawLine(allStrokes[i][j-1], allStrokes[i][j]);
-                }
-            }
-        }
+        drawStrokesToPainter(painter, allStrokes, strokeColors);
         
         bool success = finalImage.save(filename);
         if (success)
