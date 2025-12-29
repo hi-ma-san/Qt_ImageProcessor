@@ -247,22 +247,30 @@ void IP::mouseReleaseEvent(QMouseEvent *event)
                     double scaleX = (double)img.width() / pixmap.width();
                     double scaleY = (double)img.height() / pixmap.height();
                     
-                    int imgX1 = (int)(x1 * scaleX);
-                    int imgY1 = (int)(y1 * scaleY);
-                    int imgW = (int)(w * scaleX);
-                    int imgH = (int)(h * scaleY);
+                    int imgX1 = qRound(x1 * scaleX);
+                    int imgY1 = qRound(y1 * scaleY);
+                    int imgW = qRound(w * scaleX);
+                    int imgH = qRound(h * scaleY);
                     
-                    qDebug() << "Scaled to image coords:" << imgX1 << imgY1 << imgW << imgH;
-                    
-                    // Extract the selected region from actual image
-                    QImage croppedImage = img.copy(imgX1, imgY1, imgW, imgH);
-                    
-                    // Open ImageEditor with the cropped image
-                    ImageEditor *editor = new ImageEditor(croppedImage);
-                    editor->setAttribute(Qt::WA_DeleteOnClose);
-                    editor->show();
-                    
-                    qDebug() << "ImageEditor window opened";
+                    // Ensure scaled coordinates are within actual image bounds
+                    if (imgX1 >= 0 && imgY1 >= 0 && imgX1 + imgW <= img.width() && imgY1 + imgH <= img.height())
+                    {
+                        qDebug() << "Scaled to image coords:" << imgX1 << imgY1 << imgW << imgH;
+                        
+                        // Extract the selected region from actual image
+                        QImage croppedImage = img.copy(imgX1, imgY1, imgW, imgH);
+                        
+                        // Open ImageEditor with the cropped image
+                        ImageEditor *editor = new ImageEditor(croppedImage);
+                        editor->setAttribute(Qt::WA_DeleteOnClose);
+                        editor->show();
+                        
+                        qDebug() << "ImageEditor window opened";
+                    }
+                    else
+                    {
+                        qDebug() << "Scaled coordinates out of image bounds:" << imgX1 << imgY1 << imgW << imgH << "Image size:" << img.width() << img.height();
+                    }
                 }
             }
             else
