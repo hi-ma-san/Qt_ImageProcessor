@@ -229,43 +229,45 @@ void IP::mouseReleaseEvent(QMouseEvent *event)
         // Check if we have a valid selection within the image
         if (!intersection.isEmpty() && intersection.width() > 10 && intersection.height() > 10)
         {
-            // Convert to image coordinates
+            // Convert to imgWin coordinates
             int x1 = intersection.x() - imgWinX;
             int y1 = intersection.y() - imgWinY;
             int w = intersection.width();
             int h = intersection.height();
             
-            // Scale coordinates if image is scaled in the label
-            QPixmap pixmap = imgWin->pixmap(Qt::ReturnByValue);
-            if (!pixmap.isNull())
+            // Check bounds against imgWin dimensions (displayed image size)
+            if (x1 >= 0 && y1 >= 0 && x1 + w <= imgWin->width() && y1 + h <= imgWin->height())
             {
-                double scaleX = (double)img.width() / pixmap.width();
-                double scaleY = (double)img.height() / pixmap.height();
+                qDebug() << "Opening ImageEditor with region (widget coords):" << x1 << y1 << w << h;
                 
-                x1 = (int)(x1 * scaleX);
-                y1 = (int)(y1 * scaleY);
-                w = (int)(w * scaleX);
-                h = (int)(h * scaleY);
-            }
-            
-            // Ensure we're within image bounds
-            if (x1 >= 0 && y1 >= 0 && x1 + w <= img.width() && y1 + h <= img.height())
-            {
-                qDebug() << "Opening ImageEditor with region:" << x1 << y1 << w << h;
-                
-                // Extract the selected region
-                QImage croppedImage = img.copy(x1, y1, w, h);
-                
-                // Open ImageEditor with the cropped image
-                ImageEditor *editor = new ImageEditor(croppedImage);
-                editor->setAttribute(Qt::WA_DeleteOnClose);
-                editor->show();
-                
-                qDebug() << "ImageEditor window opened";
+                // Scale coordinates to actual image size if image is scaled in the label
+                QPixmap pixmap = imgWin->pixmap(Qt::ReturnByValue);
+                if (!pixmap.isNull() && !img.isNull())
+                {
+                    double scaleX = (double)img.width() / pixmap.width();
+                    double scaleY = (double)img.height() / pixmap.height();
+                    
+                    int imgX1 = (int)(x1 * scaleX);
+                    int imgY1 = (int)(y1 * scaleY);
+                    int imgW = (int)(w * scaleX);
+                    int imgH = (int)(h * scaleY);
+                    
+                    qDebug() << "Scaled to image coords:" << imgX1 << imgY1 << imgW << imgH;
+                    
+                    // Extract the selected region from actual image
+                    QImage croppedImage = img.copy(imgX1, imgY1, imgW, imgH);
+                    
+                    // Open ImageEditor with the cropped image
+                    ImageEditor *editor = new ImageEditor(croppedImage);
+                    editor->setAttribute(Qt::WA_DeleteOnClose);
+                    editor->show();
+                    
+                    qDebug() << "ImageEditor window opened";
+                }
             }
             else
             {
-                qDebug() << "Selection out of bounds:" << x1 << y1 << w << h << "Image size:" << img.width() << img.height();
+                qDebug() << "Selection out of bounds:" << x1 << y1 << w << h << "imgWin size:" << imgWin->width() << imgWin->height();
             }
         }
         else
