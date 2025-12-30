@@ -240,15 +240,20 @@ void IP::mouseReleaseEvent(QMouseEvent *event)
             {
                 qDebug() << "Opening ImageEditor with region (widget coords):" << x1 << y1 << w << h;
                 
-                // Extract region from the displayed pixmap instead of original image
+                // Extract region from the displayed pixmap at display size
                 QPixmap pixmap = imgWin->pixmap(Qt::ReturnByValue);
                 if (!pixmap.isNull())
                 {
-                    // Ensure coordinates are within pixmap bounds
-                    if (x1 >= 0 && y1 >= 0 && x1 + w <= pixmap.width() && y1 + h <= pixmap.height())
+                    // Scale pixmap to match the display size of imgWin
+                    // This ensures we capture at the displayed resolution, not original resolution
+                    QPixmap scaledPixmap = pixmap.scaled(imgWin->width(), imgWin->height(), 
+                                                         Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                    
+                    // Ensure coordinates are within scaled pixmap bounds
+                    if (x1 >= 0 && y1 >= 0 && x1 + w <= scaledPixmap.width() && y1 + h <= scaledPixmap.height())
                     {
-                        // Extract the selected region from displayed pixmap
-                        QPixmap croppedPixmap = pixmap.copy(x1, y1, w, h);
+                        // Extract the selected region from scaled pixmap
+                        QPixmap croppedPixmap = scaledPixmap.copy(x1, y1, w, h);
                         
                         // Validate that the copy succeeded
                         if (!croppedPixmap.isNull())
@@ -269,7 +274,7 @@ void IP::mouseReleaseEvent(QMouseEvent *event)
                     }
                     else
                     {
-                        qDebug() << "Selection out of pixmap bounds:" << x1 << y1 << w << h << "Pixmap size:" << pixmap.width() << pixmap.height();
+                        qDebug() << "Selection out of scaled pixmap bounds:" << x1 << y1 << w << h << "Scaled size:" << scaledPixmap.width() << scaledPixmap.height();
                     }
                 }
             }
