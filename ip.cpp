@@ -240,37 +240,20 @@ void IP::mouseReleaseEvent(QMouseEvent *event)
             {
                 qDebug() << "Opening ImageEditor with region (widget coords):" << x1 << y1 << w << h;
                 
-                // Scale coordinates to actual image size if image is scaled in the label
+                // Extract region from the displayed pixmap instead of original image
                 QPixmap pixmap = imgWin->pixmap(Qt::ReturnByValue);
-                if (!pixmap.isNull() && !img.isNull())
+                if (!pixmap.isNull())
                 {
-                    double scaleX = (double)img.width() / pixmap.width();
-                    double scaleY = (double)img.height() / pixmap.height();
+                    // Extract the selected region from displayed pixmap
+                    QPixmap croppedPixmap = pixmap.copy(x1, y1, w, h);
+                    QImage croppedImage = croppedPixmap.toImage();
                     
-                    int imgX1 = qRound(x1 * scaleX);
-                    int imgY1 = qRound(y1 * scaleY);
-                    int imgW = qRound(w * scaleX);
-                    int imgH = qRound(h * scaleY);
+                    // Open ImageEditor with the cropped image
+                    ImageEditor *editor = new ImageEditor(croppedImage);
+                    editor->setAttribute(Qt::WA_DeleteOnClose);
+                    editor->show();
                     
-                    // Ensure scaled coordinates are within actual image bounds
-                    if (imgX1 >= 0 && imgY1 >= 0 && imgX1 + imgW <= img.width() && imgY1 + imgH <= img.height())
-                    {
-                        qDebug() << "Scaled to image coords:" << imgX1 << imgY1 << imgW << imgH;
-                        
-                        // Extract the selected region from actual image
-                        QImage croppedImage = img.copy(imgX1, imgY1, imgW, imgH);
-                        
-                        // Open ImageEditor with the cropped image
-                        ImageEditor *editor = new ImageEditor(croppedImage);
-                        editor->setAttribute(Qt::WA_DeleteOnClose);
-                        editor->show();
-                        
-                        qDebug() << "ImageEditor window opened";
-                    }
-                    else
-                    {
-                        qDebug() << "Scaled coordinates out of image bounds:" << imgX1 << imgY1 << imgW << imgH << "Image size:" << img.width() << img.height();
-                    }
+                    qDebug() << "ImageEditor window opened with display-size region:" << w << "x" << h;
                 }
             }
             else
