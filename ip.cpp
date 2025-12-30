@@ -244,16 +244,33 @@ void IP::mouseReleaseEvent(QMouseEvent *event)
                 QPixmap pixmap = imgWin->pixmap(Qt::ReturnByValue);
                 if (!pixmap.isNull())
                 {
-                    // Extract the selected region from displayed pixmap
-                    QPixmap croppedPixmap = pixmap.copy(x1, y1, w, h);
-                    QImage croppedImage = croppedPixmap.toImage();
-                    
-                    // Open ImageEditor with the cropped image
-                    ImageEditor *editor = new ImageEditor(croppedImage);
-                    editor->setAttribute(Qt::WA_DeleteOnClose);
-                    editor->show();
-                    
-                    qDebug() << "ImageEditor window opened with display-size region:" << w << "x" << h;
+                    // Ensure coordinates are within pixmap bounds
+                    if (x1 >= 0 && y1 >= 0 && x1 + w <= pixmap.width() && y1 + h <= pixmap.height())
+                    {
+                        // Extract the selected region from displayed pixmap
+                        QPixmap croppedPixmap = pixmap.copy(x1, y1, w, h);
+                        
+                        // Validate that the copy succeeded
+                        if (!croppedPixmap.isNull())
+                        {
+                            QImage croppedImage = croppedPixmap.toImage();
+                            
+                            // Open ImageEditor with the cropped image
+                            ImageEditor *editor = new ImageEditor(croppedImage);
+                            editor->setAttribute(Qt::WA_DeleteOnClose);
+                            editor->show();
+                            
+                            qDebug() << "ImageEditor window opened with display-size region:" << w << "x" << h;
+                        }
+                        else
+                        {
+                            qDebug() << "Failed to copy pixmap region:" << x1 << y1 << w << h;
+                        }
+                    }
+                    else
+                    {
+                        qDebug() << "Selection out of pixmap bounds:" << x1 << y1 << w << h << "Pixmap size:" << pixmap.width() << pixmap.height();
+                    }
                 }
             }
             else
