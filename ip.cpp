@@ -4,9 +4,10 @@
 #include <QDebug>
 #include <QPixmap>
 #include <QMenuBar>
+#include <QRubberBand>
 
 IP::IP(QWidget *parent)
-    : QMainWindow(parent)
+    : QMainWindow(parent), rubberBand(nullptr), selecting(false)
 {
     setWindowTitle(tr("Image Processor"));
 
@@ -156,13 +157,18 @@ void IP::mouseMoveEvent(QMouseEvent *event)
     QString str = "(" + QString::number(event -> x()) + ", " + QString::number(event -> y()) + ")";
     int x = event -> x() - imgWin -> x() - central -> x();
     int y = event -> y() - imgWin -> y() - central -> y();
-    if (!img.isNull() && -1 < x && x < imgWin -> width() && -1 < y && y < imgWin -> height())
+    if (!img.isNull() && x >= 0 && x < imgWin -> width() && y >= 0 && y < imgWin -> height())
     {
         int gray = qGray(img.pixel(x, y));
         str += (" = " + QString::number(gray));
     }
     MousePosLabel -> setText("指標位置：" + str);
-
+    
+    // Update rubber band during selection
+    if (selecting && rubberBand)
+    {
+        rubberBand->setGeometry(QRect(selectionOrigin, event->pos()).normalized());
+    }
 }
 
 
@@ -172,6 +178,23 @@ void IP::mousePressEvent(QMouseEvent *event)
     if (event -> button() == Qt::LeftButton)
     {
         statusBar() -> showMessage(tr("左鍵：") + str);
+        
+        // Check if click is within imgWin and image is loaded
+        int x = event->x() - imgWin->x() - central->x();
+        int y = event->y() - imgWin->y() - central->y();
+        
+        if (!img.isNull() && x >= 0 && x < imgWin->width() && y >= 0 && y < imgWin->height())
+        {
+            selecting = true;
+            selectionOrigin = event->pos();
+            
+            if (!rubberBand)
+            {
+                rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
+            }
+            rubberBand->setGeometry(QRect(selectionOrigin, QSize()));
+            rubberBand->show();
+        }
     }
     else if (event -> button() == Qt::RightButton)
     {
@@ -187,6 +210,79 @@ void IP::mouseReleaseEvent(QMouseEvent *event)
 {
     QString str = "(" + QString::number(event -> x()) + ", " + QString::number(event -> y()) + ")";
     statusBar() -> showMessage(tr("釋放：") + str);
+    
+    if (selecting && rubberBand)
+    {
+        rubberBand->hide();
+        selecting = false;
+        
+        // Get selection rectangle in window coordinates
+        QRect selectionRect = rubberBand->geometry();
+        
+        // Convert to imgWin coordinates
+        int imgWinX = imgWin->x() + central->x();
+        int imgWinY = imgWin->y() + central->y();
+        
+        QRect imgWinRect(imgWinX, imgWinY, imgWin->width(), imgWin->height());
+        QRect intersection = selectionRect.intersected(imgWinRect);
+        
+        // Check if we have a valid selection within the image
+        if (!intersection.isEmpty() && intersection.width() > 10 && intersection.height() > 10)
+        {
+            // Convert to imgWin coordinates
+            int x1 = intersection.x() - imgWinX;
+            int y1 = intersection.y() - imgWinY;
+            int w = intersection.width();
+            int h = intersection.height();
+            
+            // Check bounds against imgWin dimensions (displayed image size)
+            if (x1 >= 0 && y1 >= 0 && x1 + w <= imgWin->width() && y1 + h <= imgWin->height())
+            {
+                qDebug() << "Opening ImageEditor with region (widget coords):" << x1 << y1 << w << h;
+                
+                // Scale coordinates to actual image size if image is scaled in the label
+                QPixmap pixmap = imgWin->pixmap(Qt::ReturnByValue);
+                if (!pixmap.isNull() && !img.isNull())
+                {
+                    double scaleX = (double)img.width() / pixmap.width();
+                    double scaleY = (double)img.height() / pixmap.height();
+                    
+                    int imgX1 = qRound(x1 * scaleX);
+                    int imgY1 = qRound(y1 * scaleY);
+                    int imgW = qRound(w * scaleX);
+                    int imgH = qRound(h * scaleY);
+                    
+                    // Ensure scaled coordinates are within actual image bounds
+                    if (imgX1 >= 0 && imgY1 >= 0 && imgX1 + imgW <= img.width() && imgY1 + imgH <= img.height())
+                    {
+                        qDebug() << "Scaled to image coords:" << imgX1 << imgY1 << imgW << imgH;
+                        
+                        // Extract the selected region from actual image
+                        QImage croppedImage = img.copy(imgX1, imgY1, imgW, imgH);
+                        
+                        // Open ImageEditor with the cropped image
+                        ImageEditor *editor = new ImageEditor(croppedImage);
+                        editor->setAttribute(Qt::WA_DeleteOnClose);
+                        editor->show();
+                        
+                        qDebug() << "ImageEditor window opened";
+                    }
+                    else
+                    {
+                        qDebug() << "Scaled coordinates out of image bounds:" << imgX1 << imgY1 << imgW << imgH << "Image size:" << img.width() << img.height();
+                    }
+                }
+            }
+            else
+            {
+                qDebug() << "Selection out of bounds:" << x1 << y1 << w << h << "imgWin size:" << imgWin->width() << imgWin->height();
+            }
+        }
+        else
+        {
+            qDebug() << "Selection too small or empty:" << intersection.width() << "x" << intersection.height();
+        }
+    }
 }
 
 void IP::mouseDoubleClickEvent(QMouseEvent *event)

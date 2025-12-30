@@ -13,6 +13,9 @@
 #include <QMouseEvent>
 #include <QStatusBar>
 #include <QLabel>
+#include <QRubberBand>
+#include <QPoint>
+#include "ie.h"
 
 
 class IP : public QMainWindow
@@ -49,6 +52,11 @@ private:
 
     QLabel  *statusLabel;
     QLabel  *MousePosLabel;
+    
+    // Selection rectangle for region capture
+    QRubberBand *rubberBand;
+    QPoint selectionOrigin;
+    bool selecting;
 
 private slots:
     void showOpenFile();
