@@ -101,13 +101,20 @@ void ImageEditor::mousePressEvent(QMouseEvent *event)
         QPixmap pixmap = imageLabel->pixmap(Qt::ReturnByValue);
         if (!pixmap.isNull())
         {
+            // Calculate offset due to centered alignment
+            int xOffset = (imageLabel->width() - pixmap.width()) / 2;
+            int yOffset = (imageLabel->height() - pixmap.height()) / 2;
+            
+            // Adjust position to account for centering
+            QPoint imagePos = labelPos - QPoint(xOffset, yOffset);
+            
             QRect imageRect = pixmap.rect();
-            if (imageRect.contains(labelPos))
+            if (imageRect.contains(imagePos))
             {
                 drawing = true;
-                lastPoint = labelPos;
+                lastPoint = imagePos;
                 currentStroke.clear();
-                currentStroke.append(labelPos);
+                currentStroke.append(imagePos);
             }
         }
     }
@@ -124,11 +131,18 @@ void ImageEditor::mouseMoveEvent(QMouseEvent *event)
         QPixmap pixmap = imageLabel->pixmap(Qt::ReturnByValue);
         if (!pixmap.isNull())
         {
+            // Calculate offset due to centered alignment
+            int xOffset = (imageLabel->width() - pixmap.width()) / 2;
+            int yOffset = (imageLabel->height() - pixmap.height()) / 2;
+            
+            // Adjust position to account for centering
+            QPoint imagePos = labelPos - QPoint(xOffset, yOffset);
+            
             QRect imageRect = pixmap.rect();
-            if (imageRect.contains(labelPos))
+            if (imageRect.contains(imagePos))
             {
-                currentStroke.append(labelPos);
-                lastPoint = labelPos;
+                currentStroke.append(imagePos);
+                lastPoint = imagePos;
                 redrawImage();
             }
         }
