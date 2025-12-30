@@ -90,24 +90,41 @@ void ImageEditor::redrawImage()
     imageLabel->setPixmap(QPixmap::fromImage(displayImage));
 }
 
+QPoint ImageEditor::mapToImageCoordinates(const QPoint &widgetPos)
+{
+    QPoint labelPos = imageLabel->mapFrom(this, widgetPos);
+    QPixmap pixmap = imageLabel->pixmap(Qt::ReturnByValue);
+    
+    if (!pixmap.isNull())
+    {
+        // Calculate offset due to centered alignment
+        int xOffset = (imageLabel->width() - pixmap.width()) / 2;
+        int yOffset = (imageLabel->height() - pixmap.height()) / 2;
+        
+        // Adjust position to account for centering
+        return labelPos - QPoint(xOffset, yOffset);
+    }
+    
+    return labelPos;
+}
+
 void ImageEditor::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton)
     {
-        QPoint pos = event->pos();
-        QPoint labelPos = imageLabel->mapFrom(this, pos);
+        QPoint imagePos = mapToImageCoordinates(event->pos());
         
         // Check if click is within image bounds
         QPixmap pixmap = imageLabel->pixmap(Qt::ReturnByValue);
         if (!pixmap.isNull())
         {
             QRect imageRect = pixmap.rect();
-            if (imageRect.contains(labelPos))
+            if (imageRect.contains(imagePos))
             {
                 drawing = true;
-                lastPoint = labelPos;
+                lastPoint = imagePos;
                 currentStroke.clear();
-                currentStroke.append(labelPos);
+                currentStroke.append(imagePos);
             }
         }
     }
@@ -117,18 +134,17 @@ void ImageEditor::mouseMoveEvent(QMouseEvent *event)
 {
     if (drawing && (event->buttons() & Qt::LeftButton))
     {
-        QPoint pos = event->pos();
-        QPoint labelPos = imageLabel->mapFrom(this, pos);
+        QPoint imagePos = mapToImageCoordinates(event->pos());
         
         // Check if position is within image bounds
         QPixmap pixmap = imageLabel->pixmap(Qt::ReturnByValue);
         if (!pixmap.isNull())
         {
             QRect imageRect = pixmap.rect();
-            if (imageRect.contains(labelPos))
+            if (imageRect.contains(imagePos))
             {
-                currentStroke.append(labelPos);
-                lastPoint = labelPos;
+                currentStroke.append(imagePos);
+                lastPoint = imagePos;
                 redrawImage();
             }
         }

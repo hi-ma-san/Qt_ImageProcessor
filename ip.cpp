@@ -240,36 +240,41 @@ void IP::mouseReleaseEvent(QMouseEvent *event)
             {
                 qDebug() << "Opening ImageEditor with region (widget coords):" << x1 << y1 << w << h;
                 
-                // Scale coordinates to actual image size if image is scaled in the label
+                // Extract region from the displayed pixmap at display size
                 QPixmap pixmap = imgWin->pixmap(Qt::ReturnByValue);
-                if (!pixmap.isNull() && !img.isNull())
+                if (!pixmap.isNull())
                 {
-                    double scaleX = (double)img.width() / pixmap.width();
-                    double scaleY = (double)img.height() / pixmap.height();
+                    // Scale pixmap to match the display size of imgWin
+                    // This ensures we capture at the displayed resolution, not original resolution
+                    QPixmap scaledPixmap = pixmap.scaled(imgWin->width(), imgWin->height(), 
+                                                         Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
                     
-                    int imgX1 = qRound(x1 * scaleX);
-                    int imgY1 = qRound(y1 * scaleY);
-                    int imgW = qRound(w * scaleX);
-                    int imgH = qRound(h * scaleY);
-                    
-                    // Ensure scaled coordinates are within actual image bounds
-                    if (imgX1 >= 0 && imgY1 >= 0 && imgX1 + imgW <= img.width() && imgY1 + imgH <= img.height())
+                    // Ensure coordinates are within scaled pixmap bounds
+                    if (x1 >= 0 && y1 >= 0 && x1 + w <= scaledPixmap.width() && y1 + h <= scaledPixmap.height())
                     {
-                        qDebug() << "Scaled to image coords:" << imgX1 << imgY1 << imgW << imgH;
+                        // Extract the selected region from scaled pixmap
+                        QPixmap croppedPixmap = scaledPixmap.copy(x1, y1, w, h);
                         
-                        // Extract the selected region from actual image
-                        QImage croppedImage = img.copy(imgX1, imgY1, imgW, imgH);
-                        
-                        // Open ImageEditor with the cropped image
-                        ImageEditor *editor = new ImageEditor(croppedImage);
-                        editor->setAttribute(Qt::WA_DeleteOnClose);
-                        editor->show();
-                        
-                        qDebug() << "ImageEditor window opened";
+                        // Validate that the copy succeeded
+                        if (!croppedPixmap.isNull())
+                        {
+                            QImage croppedImage = croppedPixmap.toImage();
+                            
+                            // Open ImageEditor with the cropped image
+                            ImageEditor *editor = new ImageEditor(croppedImage);
+                            editor->setAttribute(Qt::WA_DeleteOnClose);
+                            editor->show();
+                            
+                            qDebug() << "ImageEditor window opened with display-size region:" << w << "x" << h;
+                        }
+                        else
+                        {
+                            qDebug() << "Failed to copy pixmap region:" << x1 << y1 << w << h;
+                        }
                     }
                     else
                     {
-                        qDebug() << "Scaled coordinates out of image bounds:" << imgX1 << imgY1 << imgW << imgH << "Image size:" << img.width() << img.height();
+                        qDebug() << "Selection out of scaled pixmap bounds:" << x1 << y1 << w << h << "Scaled size:" << scaledPixmap.width() << scaledPixmap.height();
                     }
                 }
             }
